@@ -10,7 +10,10 @@ import (
 
 // 数据库初始化
 func InitDB() (*sql.DB, error) {
+	// 导入dsn
 	dsn := config.Cfg.Database.DSN
+
+	// 使用 database/sql 的 sql.Open 函数打开一个数据库连接对象
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
 		return nil, err
