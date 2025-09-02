@@ -1,6 +1,7 @@
 package main
 
 import (
+	"campus-activity-api/internal/config"
 	"campus-activity-api/internal/database"
 	"campus-activity-api/internal/handlers"
 	"log"
@@ -11,17 +12,22 @@ import (
 )
 
 func main() {
-	// 1. 初始化数据库连接
+	// 1. 加载配置
+	if err := config.LoadConfig(); err != nil {
+		log.Fatalf("无法加载配置: %v", err)
+	}
+
+	// 2. 初始化数据库连接
 	db, err := database.InitDB()
 	if err != nil {
 		log.Fatalf("无法初始化数据库: %v", err)
 	}
 	defer db.Close()
-	// 2. 将数据库连接实例注入到handlers包
+	// 3. 将数据库连接实例注入到handlers包
 	handlers.DB = db
 	log.Println("数据库连接成功!")
 
-	// 3. Gin 路由
+	// 4. Gin 路由
 	router := gin.Default()
 	router.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost:5173"},

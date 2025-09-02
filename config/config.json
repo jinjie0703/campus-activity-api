@@ -1,0 +1,12 @@
+{
+  "development": {
+    "database": {
+      "dsn": "root:2594817591@tcp(127.0.0.1:3306)/campus_activity?charset=utf8mb4&parseTime=True&loc=Local"
+    }
+  },
+  "azure": {
+    "database": {
+      "dsn": "your_production_db_user:your_production_db_password@tcp(your_production_db_host:3306)/your_production_db_name?charset=utf8mb4&parseTime=True&loc=Local"
+    }
+  }
+}

@@ -1,6 +1,7 @@
 package database
 
 import (
+	"campus-activity-api/internal/config"
 	"database/sql"
 	"time"
 
@@ -9,7 +10,7 @@ import (
 
 // 数据库初始化
 func InitDB() (*sql.DB, error) {
-	dsn := "root:2594817591@tcp(127.0.0.1:3306)/campus_activity?charset=utf8mb4&parseTime=True&loc=Local"
+	dsn := config.Cfg.Database.DSN
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
 		return nil, err
