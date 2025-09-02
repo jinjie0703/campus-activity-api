@@ -6,7 +6,7 @@
   },
   "azure": {
     "database": {
-      "dsn": "your_production_db_user:your_production_db_password@tcp(your_production_db_host:3306)/your_production_db_name?charset=utf8mb4&parseTime=True&loc=Local"
+      "dsn": "cg2594817591:20050726.cg@tcp(jinjie0808.mysql.database.azure.com:3306)/campus_activity?charset=utf8mb4&parseTime=True&loc=Local&tls=true"
     }
   }
 }

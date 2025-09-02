@@ -18,7 +18,7 @@ var Cfg *Config
 func LoadConfig() error {
 	env := os.Getenv("APP_ENV")
 	if env == "" {
-		env = "development"
+		env = "azure"
 	}
 
 	file, err := os.ReadFile("config/config.json")
