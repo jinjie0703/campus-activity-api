@@ -41,8 +41,8 @@ func main() {
 
 	api := router.Group("/api")
 	{
-		api.POST("/register", handlers.Register) // 新增注册路由
-		api.POST("/login", handlers.Login)
+		api.POST("/register", handlers.Register) // 注册
+		api.POST("/login", handlers.Login)       // 登录
 		api.GET("/users/:id/registrations", handlers.GetMyActivities)
 		api.GET("/activities", handlers.GetActivities)
 		api.GET("/activities/:id", handlers.GetActivityByID)
@@ -53,15 +53,14 @@ func main() {
 		api.GET("/stats/hot-activities", handlers.GetHotActivities)
 		api.GET("/stats/organizer-activity-counts", handlers.GetOrganizerStats)
 		api.GET("/activities/:id/export", handlers.ExportRegistrations)
-
-		api.GET("/activities/:id/registrations", handlers.GetRegistrationsByActivityIDHandler(db))
 		api.POST("/activities/:id/register", middleware.AuthMiddleware(), handlers.RegisterForActivityHandler(db))
 		// Admin routes
+		api.GET("/activities/:id/registrations", handlers.GetRegistrationsByActivityIDHandler(db))
 		admin := api.Group("/admin")
 		{
 			admin.GET("/registrations", handlers.GetRegistrationsHandler(db))
 			admin.PUT("/registrations/:registrationId/status", handlers.AdminUpdateRegistrationStatusHandler(db))
-			admin.DELETE("/registrations/:id", handlers.DeleteRegistrationHandler(db))
+			admin.DELETE("/registrations/:id", middleware.AuthMiddleware(), handlers.AdminDeleteRegistrationHandler(db))
 		}
 	}
 
