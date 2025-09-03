@@ -98,7 +98,12 @@ func CreateActivity(c *gin.Context) {
 		return
 	}
 	// 类型断言，将 any/interface{} 转换为 int
-	activity.CreatedByID = userID.(int)
+	if uid, ok := userID.(float64); ok {
+		activity.CreatedByID = int(uid)
+	} else {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "无法解析用户ID"})
+		return
+	}
 
 	// 4. 执行数据库插入操作
 	// 使用 ExecContext 来支持请求的上下文，例如超时控制

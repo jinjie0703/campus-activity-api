@@ -2,12 +2,15 @@
 package handlers
 
 import (
+	"campus-activity-api/internal/config"
 	"campus-activity-api/internal/models"
 	"database/sql"
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -97,9 +100,23 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	// 密码验证通过，返回成功信息 (不包含密码哈希)
+	// 密码验证通过，生成JWT
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"id":       user.ID,
+		"username": user.Username,
+		"role":     user.Role,
+		"exp":      time.Now().Add(time.Hour * 24).Unix(),
+	})
+
+	tokenString, err := token.SignedString([]byte(config.Cfg.JWT.Secret))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "无法生成token"})
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"message": "登录成功",
+		"token":   tokenString,
 		"user": gin.H{
 			"id":       user.ID,
 			"username": user.Username,

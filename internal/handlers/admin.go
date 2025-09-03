@@ -39,11 +39,18 @@ func GetRegistrationsHandler(db *sql.DB) gin.HandlerFunc {
 // 			return
 // 		}
 
+// 		// 类型断言
+// 		uid, ok := userID.(float64)
+// 		if !ok {
+// 			c.JSON(http.StatusInternalServerError, gin.H{"error": "无法解析用户ID"})
+// 			return
+// 		}
+
 // 		// --- 核心修改在这里 ---
 // 		// 准备插入语句，明确包含 status 字段
 // 		query := "INSERT INTO registrations (user_id, activity_id, status) VALUES (?, ?, 'pending')"
 
-// 		_, err = db.Exec(query, userID, activityID)
+// 		_, err = db.Exec(query, int(uid), activityID)
 // 		if err != nil {
 // 			// 处理可能的错误，比如重复报名
 // 			if strings.Contains(err.Error(), "Duplicate entry") {

@@ -10,9 +10,15 @@ type DatabaseConfig struct {
 	DSN string `json:"dsn"`
 }
 
+// JWT 结构体
+type JWTConfig struct {
+	Secret string `json:"secret"`
+}
+
 // database 结构体
 type Config struct {
 	Database DatabaseConfig `json:"database"`
+	JWT      JWTConfig      `json:"jwt"`
 }
 
 // 全局指针 Cfg，用于存储最终加载的配置

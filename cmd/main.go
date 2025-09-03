@@ -4,6 +4,7 @@ import (
 	"campus-activity-api/internal/config"
 	"campus-activity-api/internal/database"
 	"campus-activity-api/internal/handlers"
+	"campus-activity-api/internal/middleware"
 	"log"
 	"time"
 
@@ -32,7 +33,8 @@ func main() {
 	router.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost:5173"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE"},
-		AllowHeaders:     []string{"Origin", "Content-Type"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"Authorization"},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}))
@@ -44,7 +46,7 @@ func main() {
 		api.GET("/users/:id/registrations", handlers.GetMyActivities)
 		api.GET("/activities", handlers.GetActivities)
 		api.GET("/activities/:id", handlers.GetActivityByID)
-		api.POST("/activities", handlers.CreateActivity)
+		api.POST("/activities", middleware.AuthMiddleware(), handlers.CreateActivity)
 		api.PUT("/activities/:id", handlers.UpdateActivity)
 		api.DELETE("/activities/:id", handlers.DeleteActivity)
 		api.DELETE("/registrations/:id", handlers.CancelRegistration)
@@ -53,7 +55,7 @@ func main() {
 		api.GET("/activities/:id/export", handlers.ExportRegistrations)
 
 		api.GET("/activities/:id/registrations", handlers.GetRegistrationsByActivityIDHandler(db))
-		api.POST("/activities/:id/register", handlers.RegisterForActivityHandler(db))
+		api.POST("/activities/:id/register", middleware.AuthMiddleware(), handlers.RegisterForActivityHandler(db))
 		// Admin routes
 		admin := api.Group("/admin")
 		{
