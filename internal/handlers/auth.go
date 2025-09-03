@@ -5,7 +5,6 @@ import (
 	"campus-activity-api/internal/config"
 	"campus-activity-api/internal/models"
 	"database/sql"
-	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -125,74 +124,4 @@ func Login(c *gin.Context) {
 			"role":     user.Role,
 		},
 	})
-}
-
-// 获取用户报名的所有活动
-func GetMyActivities(c *gin.Context) {
-	// 从 url 参数中获取用户id
-	userID := c.Param("id")
-	// sql查询
-	query := `SELECT r.id, a.id, a.title, a.location, a.start_time FROM registrations r JOIN activities a ON r.activity_id = a.id WHERE r.user_id = ? ORDER BY a.start_time DESC`
-	rows, err := DB.Query(query, userID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "查询我的活动失败"})
-		return
-	}
-	defer rows.Close()
-
-	// 创建一个 []models.UserRegistration 切片存储结果，返回到前端页面
-	registrations := []models.UserRegistration{}
-	for rows.Next() {
-		var reg models.UserRegistration
-		if err := rows.Scan(&reg.RegistrationID, &reg.ActivityID, &reg.Title, &reg.Location, &reg.StartTime); err != nil {
-			log.Println("扫描我的活动数据失败:", err)
-			continue
-		}
-		registrations = append(registrations, reg)
-	}
-	c.JSON(http.StatusOK, registrations)
-}
-
-// 用户报名活动处理
-func RegisterForActivity(c *gin.Context) {
-	var req struct {
-		UserID int `json:"userId"`
-	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效请求"})
-		return
-	}
-	activityID := c.Param("id")
-	// 将报名信息插入注册信息表
-	stmt, err := DB.Prepare("INSERT INTO registrations(user_id, activity_id) VALUES(?, ?)")
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "报名失败"})
-		return
-	}
-	defer stmt.Close()
-	// 检查约束
-	_, err = stmt.Exec(req.UserID, activityID)
-	if err != nil {
-		c.JSON(http.StatusConflict, gin.H{"error": "你已经报过名了"})
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{"message": "报名成功"})
-}
-
-// 用户取消活动报名处理
-func CancelRegistration(c *gin.Context) {
-	registrationID := c.Param("id")
-	// sql删除
-	stmt, err := DB.Prepare("DELETE FROM registrations WHERE id = ?")
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "取消报名失败"})
-		return
-	}
-	defer stmt.Close()
-	_, err = stmt.Exec(registrationID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "执行取消报名失败"})
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{"message": "取消报名成功"})
 }

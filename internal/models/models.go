@@ -41,7 +41,7 @@ type Registration struct {
 	UserID           int       `json:"userId"`
 	ActivityID       int       `json:"activityId"`
 	RegistrationTime time.Time `json:"registrationTime"`
-	Status           string    `json:"status"` // "pending", "approved", "rejected"
+	Status           string    `json:"status"` // "pending", "approved"
 }
 
 // 报名信息

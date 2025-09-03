@@ -11,7 +11,52 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// 从数据库中获取所有用户报名信息
+func GetAllRegistrations(db *sql.DB) ([]models.RegistrationDetails, error) {
+	query := `
+        SELECT
+            r.id,
+            r.activity_id,
+            a.title,
+            r.user_id,
+            u.full_name,
+            u.college,
+            r.registration_time,
+            r.status
+        FROM registrations r
+        JOIN users u ON r.user_id = u.id
+        JOIN activities a ON r.activity_id = a.id
+        ORDER BY r.registration_time DESC
+    `
+	rows, err := db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	// 创建空切片存放结果，遍历查询结果，放入切片
+	var registrations []models.RegistrationDetails
+	for rows.Next() {
+		var reg models.RegistrationDetails
+		if err := rows.Scan(
+			&reg.RegistrationID,
+			&reg.ActivityID,
+			&reg.ActivityTitle,
+			&reg.UserID,
+			&reg.UserFullName,
+			&reg.UserCollege,
+			&reg.RegistrationTime,
+			&reg.Status,
+		); err != nil {
+			return nil, err
+		}
+		registrations = append(registrations, reg)
+	}
+	return registrations, nil
+}
+
 // 获取所有用户的报名信息
+// 获取系统中所有用户的报名信息（管理员接口）。
 func GetRegistrationsHandler(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		registrations, err := GetAllRegistrations(db)
@@ -23,50 +68,15 @@ func GetRegistrationsHandler(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
-// 处理“用户报名活动”的请求
-// func RegisterForActivityHandler(db *sql.DB) gin.HandlerFunc {
-// 	return func(c *gin.Context) {
-// 		// 从 URL 获取活动 ID
-// 		activityID, err := strconv.Atoi(c.Param("id"))
-// 		if err != nil {
-// 			c.JSON(http.StatusBadRequest, gin.H{"error": "无效的活动ID"})
-// 			return
-// 		}
-
-// 		// 从认证中间件获取用户ID (这是标准做法)
-// 		userID, exists := c.Get("userID")
-// 		if !exists {
-// 			c.JSON(http.StatusUnauthorized, gin.H{"error": "用户未登录"})
-// 			return
-// 		}
-
-// 		// 类型断言
-// 		uid, ok := userID.(float64)
-// 		if !ok {
-// 			c.JSON(http.StatusInternalServerError, gin.H{"error": "无法解析用户ID"})
-// 			return
-// 		}
-
-// 		// --- 核心修改在这里 ---
-// 		// 准备插入语句，明确包含 status 字段
-// 		query := "INSERT INTO registrations (user_id, activity_id, status) VALUES (?, ?, 'pending')"
-
-// 		_, err = db.Exec(query, int(uid), activityID)
-// 		if err != nil {
-// 			// 处理可能的错误，比如重复报名
-// 			if strings.Contains(err.Error(), "Duplicate entry") {
-// 				c.JSON(http.StatusConflict, gin.H{"error": "你已经报名过该活动"})
-// 				return
-// 			}
-// 			c.JSON(http.StatusInternalServerError, gin.H{"error": "报名失败，服务器错误"})
-// 			return
-// 		}
-
-// 		c.JSON(http.StatusCreated, gin.H{"message": "报名成功，请等待管理员审核"})
-// 	}
-// }
+// 更新某个报名记录的 status 字段（比如：已通过、已拒绝、待审核等）
+func UpdateRegistrationStatus(db *sql.DB, registrationID int, status string) error {
+	query := "UPDATE registrations SET status = ? WHERE id = ?"
+	_, err := db.Exec(query, status, registrationID)
+	return err
+}
 
 // 管理员更新报名状态的 Gin 处理函数
+// 管理员修改某个报名的状态
 func AdminUpdateRegistrationStatusHandler(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 从 URL 获取报名ID
@@ -86,8 +96,8 @@ func AdminUpdateRegistrationStatusHandler(db *sql.DB) gin.HandlerFunc {
 		}
 
 		// 验证 status 值是否合法
-		if req.Status != "approved" && req.Status != "rejected" && req.Status != "pending" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "状态值必须是 'approved', 'rejected', 或 'pending'"})
+		if req.Status != "approved" && req.Status != "pending" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "状态值必须是 'approved' 或 'pending'"})
 			return
 		}
 
@@ -101,52 +111,50 @@ func AdminUpdateRegistrationStatusHandler(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
-// 学生自己取消自己报名的活动
-// func DeleteRegistrationHandler(db *sql.DB) gin.HandlerFunc {
-// 	return func(c *gin.Context) {
-// 		// 从 URL 获取要删除的报名记录 ID
-// 		registrationID, err := strconv.Atoi(c.Param("id"))
-// 		if err != nil {
-// 			c.JSON(http.StatusBadRequest, gin.H{"error": "无效的报名ID"})
-// 			return
-// 		}
+// 根据 activityID 查询该活动下的所有报名用户信息
+func GetRegistrationsByActivityID(db *sql.DB, activityID int) ([]models.RegistrationDetailsForActivity, error) {
+	query := `
+        SELECT
+            r.id, 
+            u.id,
+            u.username,
+            u.full_name,
+            u.college,
+            r.registration_time,
+            r.status 
+        FROM registrations r
+        JOIN users u ON r.user_id = u.id
+        WHERE r.activity_id = ?
+        ORDER BY r.registration_time ASC
+    `
+	rows, err := db.Query(query, activityID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
 
-// 		// 从认证中间件获取当前登录用户的 ID
-// 		currentUserID, exists := c.Get("userID")
-// 		if !exists {
-// 			c.JSON(http.StatusUnauthorized, gin.H{"error": "请先登录"})
-// 			return
-// 		}
-
-// 		// --- 这是最关键的安全校验 ---
-// 		// 准备一条带有双重验证的 DELETE 语句
-// 		// 只有当 id 和 user_id 同时匹配时，才会执行删除
-// 		query := "DELETE FROM registrations WHERE id = ? AND user_id = ?"
-
-// 		result, err := db.Exec(query, registrationID, currentUserID)
-// 		if err != nil {
-// 			c.JSON(http.StatusInternalServerError, gin.H{"error": "取消报名失败，服务器错误"})
-// 			return
-// 		}
-
-// 		// 检查是否有行被影响。如果没有，说明这条记录不属于该用户，或者不存在
-// 		rowsAffected, err := result.RowsAffected()
-// 		if err != nil {
-// 			c.JSON(http.StatusInternalServerError, gin.H{"error": "取消报名失败，无法确认操作"})
-// 			return
-// 		}
-
-// 		if rowsAffected == 0 {
-// 			// 这通常意味着用户在尝试删除不属于自己的记录
-// 			c.JSON(http.StatusForbidden, gin.H{"error": "无权操作或该报名不存在"})
-// 			return
-// 		}
-
-// 		c.JSON(http.StatusOK, gin.H{"message": "取消报名成功"})
-// 	}
-// }
+	// 创建空切片存放结果，遍历查询结果，放入切片
+	var registrants []models.RegistrationDetailsForActivity
+	for rows.Next() {
+		var reg models.RegistrationDetailsForActivity
+		if err := rows.Scan(
+			&reg.RegistrationID,
+			&reg.UserID,
+			&reg.Username,
+			&reg.UserFullName,
+			&reg.UserCollege,
+			&reg.RegistrationTime,
+			&reg.Status,
+		); err != nil {
+			return nil, err
+		}
+		registrants = append(registrants, reg)
+	}
+	return registrants, nil
+}
 
 // 根据活动 ID 获取该活动的所有报名者信息，并返回给前端
+// 根据活动 ID 获取该活动的所有报名者信息
 func GetRegistrationsByActivityIDHandler(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 从 URL 中获取活动 ID
@@ -174,10 +182,19 @@ func GetRegistrationsByActivityIDHandler(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
+// 根据 registrationID 删除报名记录
+func DeleteRegistration(db *sql.DB, registrationID int) error {
+	query := "DELETE FROM registrations WHERE id = ?"
+	_, err := db.Exec(query, registrationID)
+	return err
+}
+
 // AdminDeleteRegistrationHandler (最终正确版本 - 实时计算模式)
 // 管理员删除用户的报名记录。
 // 在这种模式下，函数唯一的职责就是从 registrations 表删除记录。
 // 报名人数会在需要时通过查询 registrations 表重新计算。
+
+// 管理员删除某个用户的报名记录
 func AdminDeleteRegistrationHandler(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 1. 从 URL 获取要删除的报名记录 ID
@@ -216,67 +233,3 @@ func AdminDeleteRegistrationHandler(db *sql.DB) gin.HandlerFunc {
 		c.JSON(http.StatusOK, gin.H{"message": "删除报名成功"})
 	}
 }
-
-// AdminDeleteRegistrationHandler 是一个正确的、供管理员使用的删除函数
-// 它在一个事务中处理删除操作并同步更新活动人数
-// func AdminDeleteRegistrationHandler(db *sql.DB) gin.HandlerFunc {
-// 	return func(c *gin.Context) {
-// 		// 从 URL 获取要删除的报名记录 ID
-// 		registrationID, err := strconv.Atoi(c.Param("id")) // 假设路由是 /registrations/:id
-// 		if err != nil {
-// 			c.JSON(http.StatusBadRequest, gin.H{"error": "无效的报名ID"})
-// 			return
-// 		}
-
-// 		// --- 核心逻辑：使用事务 ---
-// 		tx, err := db.Begin()
-// 		if err != nil {
-// 			log.Printf("开启事务失败: %v", err)
-// 			c.JSON(http.StatusInternalServerError, gin.H{"error": "服务器内部错误"})
-// 			return
-// 		}
-// 		defer tx.Rollback() // 保证出错时回滚
-
-// 		// 1. 在删除前，获取该报名的状态和关联的活动ID
-// 		var status string
-// 		var activityID int
-// 		querySelect := "SELECT status, activity_id FROM registrations WHERE id = ? FOR UPDATE"
-// 		err = tx.QueryRow(querySelect, registrationID).Scan(&status, &activityID)
-// 		if err != nil {
-// 			if err == sql.ErrNoRows {
-// 				c.JSON(http.StatusNotFound, gin.H{"error": "该报名记录不存在"})
-// 				return
-// 			}
-// 			log.Printf("查询报名信息失败: %v", err)
-// 			c.JSON(http.StatusInternalServerError, gin.H{"error": "服务器内部错误"})
-// 			return
-// 		}
-
-// 		// 2. 执行删除操作 (没有 user_id 校验)
-// 		_, err = tx.Exec("DELETE FROM registrations WHERE id = ?", registrationID)
-// 		if err != nil {
-// 			log.Printf("删除报名记录失败: %v", err)
-// 			c.JSON(http.StatusInternalServerError, gin.H{"error": "删除失败"})
-// 			return
-// 		}
-
-// 		// 3. 如果被删除的记录是 "approved" 状态，则需要将活动人数减 1
-// 		if status == "approved" {
-// 			_, err = tx.Exec("UPDATE activities SET registered_count = registered_count - 1 WHERE id = ? AND registered_count > 0", activityID)
-// 			if err != nil {
-// 				log.Printf("更新活动人数失败: %v", err)
-// 				c.JSON(http.StatusInternalServerError, gin.H{"error": "更新活动人数失败"})
-// 				return
-// 			}
-// 		}
-
-// 		// 4. 提交事务
-// 		if err := tx.Commit(); err != nil {
-// 			log.Printf("提交事务失败: %v", err)
-// 			c.JSON(http.StatusInternalServerError, gin.H{"error": "服务器内部错误"})
-// 			return
-// 		}
-
-// 		c.JSON(http.StatusOK, gin.H{"message": "删除报名成功"})
-// 	}
-// }

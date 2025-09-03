@@ -14,6 +14,7 @@ import (
 	"github.com/xuri/excelize/v2"
 )
 
+// 获取活动列表，支持条件筛选
 func GetActivities(c *gin.Context) {
 	category := c.Query("category")
 	search := c.Query("search")
@@ -50,6 +51,7 @@ func GetActivities(c *gin.Context) {
 	c.JSON(http.StatusOK, activities)
 }
 
+// 根据活动 ID 获取单个活动的详细信息
 func GetActivityByID(c *gin.Context) {
 	id := c.Param("id")
 	var a models.Activity
@@ -65,6 +67,7 @@ func GetActivityByID(c *gin.Context) {
 	c.JSON(http.StatusOK, a)
 }
 
+// 创建一个新活动
 func CreateActivity(c *gin.Context) {
 	var activity models.Activity
 
@@ -136,6 +139,7 @@ func CreateActivity(c *gin.Context) {
 	c.JSON(http.StatusCreated, activity) // 返回包含新ID的完整活动对象
 }
 
+// 更新指定活动的信息
 func UpdateActivity(c *gin.Context) {
 	id := c.Param("id")
 	var a models.Activity
@@ -157,6 +161,7 @@ func UpdateActivity(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "活动更新成功"})
 }
 
+// 删除一个活动
 func DeleteActivity(c *gin.Context) {
 	id := c.Param("id")
 	stmt, err := DB.Prepare("DELETE FROM activities WHERE id = ?")
@@ -173,6 +178,7 @@ func DeleteActivity(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "活动删除成功"})
 }
 
+// 导出某个活动的报名信息（Excel 文件下载）
 func ExportRegistrations(c *gin.Context) {
 	activityID := c.Param("id")
 	query := `SELECT u.full_name, u.username, u.college, r.registration_time FROM registrations r JOIN users u ON r.user_id = u.id WHERE r.activity_id = ?`
