@@ -55,8 +55,7 @@ func GetAllRegistrations(db *sql.DB) ([]models.RegistrationDetails, error) {
 	return registrations, nil
 }
 
-// 获取所有用户的报名信息
-// 获取系统中所有用户的报名信息（管理员接口）。
+// 获取系统中所有用户的报名信息
 func GetRegistrationsHandler(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		registrations, err := GetAllRegistrations(db)
@@ -68,7 +67,7 @@ func GetRegistrationsHandler(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
-// 更新某个报名记录的 status 字段（比如：已通过、已拒绝、待审核等）
+// 更新某个报名记录的 status 字段
 func UpdateRegistrationStatus(db *sql.DB, registrationID int, status string) error {
 	query := "UPDATE registrations SET status = ? WHERE id = ?"
 	_, err := db.Exec(query, status, registrationID)
@@ -181,18 +180,6 @@ func GetRegistrationsByActivityIDHandler(db *sql.DB) gin.HandlerFunc {
 		c.JSON(http.StatusOK, registrants)
 	}
 }
-
-// 根据 registrationID 删除报名记录
-func DeleteRegistration(db *sql.DB, registrationID int) error {
-	query := "DELETE FROM registrations WHERE id = ?"
-	_, err := db.Exec(query, registrationID)
-	return err
-}
-
-// AdminDeleteRegistrationHandler (最终正确版本 - 实时计算模式)
-// 管理员删除用户的报名记录。
-// 在这种模式下，函数唯一的职责就是从 registrations 表删除记录。
-// 报名人数会在需要时通过查询 registrations 表重新计算。
 
 // 管理员删除某个用户的报名记录
 func AdminDeleteRegistrationHandler(db *sql.DB) gin.HandlerFunc {

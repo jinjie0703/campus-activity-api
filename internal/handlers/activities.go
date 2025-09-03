@@ -4,14 +4,11 @@ package handlers
 import (
 	"campus-activity-api/internal/models"
 	"database/sql"
-	"fmt"
 	"log"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/xuri/excelize/v2"
 )
 
 // 获取活动列表，支持条件筛选
@@ -139,28 +136,6 @@ func CreateActivity(c *gin.Context) {
 	c.JSON(http.StatusCreated, activity) // 返回包含新ID的完整活动对象
 }
 
-// 更新指定活动的信息
-func UpdateActivity(c *gin.Context) {
-	id := c.Param("id")
-	var a models.Activity
-	if err := c.ShouldBindJSON(&a); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的活动数据"})
-		return
-	}
-	stmt, err := DB.Prepare("UPDATE activities SET title=?, description=?, category=?, organizer=?, location=?, start_time=?, end_time=?, capacity=? WHERE id=?")
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新活动失败"})
-		return
-	}
-	defer stmt.Close()
-	_, err = stmt.Exec(a.Title, a.Description, a.Category, a.Organizer, a.Location, a.StartTime, a.EndTime, a.Capacity, id)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "执行更新活动失败"})
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{"message": "活动更新成功"})
-}
-
 // 删除一个活动
 func DeleteActivity(c *gin.Context) {
 	id := c.Param("id")
@@ -176,41 +151,4 @@ func DeleteActivity(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "活动删除成功"})
-}
-
-// 导出某个活动的报名信息（Excel 文件下载）
-func ExportRegistrations(c *gin.Context) {
-	activityID := c.Param("id")
-	query := `SELECT u.full_name, u.username, u.college, r.registration_time FROM registrations r JOIN users u ON r.user_id = u.id WHERE r.activity_id = ?`
-	rows, err := DB.Query(query, activityID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "查询报名数据失败"})
-		return
-	}
-	defer rows.Close()
-
-	f := excelize.NewFile()
-	sheetName := "Sheet1"
-	f.SetCellValue(sheetName, "A1", "姓名")
-	f.SetCellValue(sheetName, "B1", "学号")
-	f.SetCellValue(sheetName, "C1", "学院")
-	f.SetCellValue(sheetName, "D1", "报名时间")
-
-	rowNum := 2
-	for rows.Next() {
-		var fullName, username, college string
-		var regTime time.Time
-		rows.Scan(&fullName, &username, &college, &regTime)
-		f.SetCellValue(sheetName, fmt.Sprintf("A%d", rowNum), fullName)
-		f.SetCellValue(sheetName, fmt.Sprintf("B%d", rowNum), username)
-		f.SetCellValue(sheetName, fmt.Sprintf("C%d", rowNum), college)
-		f.SetCellValue(sheetName, fmt.Sprintf("D%d", rowNum), regTime.Format("2006-01-02 15:04:05"))
-		rowNum++
-	}
-
-	c.Header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-	c.Header("Content-Disposition", "attachment; filename="+"registrations_activity_"+activityID+".xlsx")
-	if err := f.Write(c.Writer); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "生成Excel文件失败"})
-	}
 }

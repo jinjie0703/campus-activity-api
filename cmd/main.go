@@ -41,19 +41,21 @@ func main() {
 
 	api := router.Group("/api")
 	{
+		// auth
 		api.POST("/register", handlers.Register) // 注册
 		api.POST("/login", handlers.Login)       // 登录
+		// user
 		api.GET("/users/:id/registrations", handlers.GetMyActivities)
+		api.POST("/activities/:id/register", middleware.AuthMiddleware(), handlers.RegisterForActivityHandler(db))
+		api.DELETE("/registrations/:id", handlers.CancelRegistration)
+		// activity
 		api.GET("/activities", handlers.GetActivities)
 		api.GET("/activities/:id", handlers.GetActivityByID)
 		api.POST("/activities", middleware.AuthMiddleware(), handlers.CreateActivity)
-		api.PUT("/activities/:id", handlers.UpdateActivity)
 		api.DELETE("/activities/:id", handlers.DeleteActivity)
-		api.DELETE("/registrations/:id", handlers.CancelRegistration)
+		// stats
 		api.GET("/stats/hot-activities", handlers.GetHotActivities)
 		api.GET("/stats/organizer-activity-counts", handlers.GetOrganizerStats)
-		api.GET("/activities/:id/export", handlers.ExportRegistrations)
-		api.POST("/activities/:id/register", middleware.AuthMiddleware(), handlers.RegisterForActivityHandler(db))
 		// Admin routes
 		api.GET("/activities/:id/registrations", handlers.GetRegistrationsByActivityIDHandler(db))
 		admin := api.Group("/admin")
