@@ -62,17 +62,27 @@ func RegisterForActivityHandler(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
-		// --- 核心修改在这里 ---
-		// 准备插入语句，明确包含 status 字段
-		query := "INSERT INTO registrations (user_id, activity_id, status) VALUES (?, ?, 'pending')"
+		// --- 重构：使用 Registration 模型 ---
+		// 1. 创建一个 Registration 对象
+		registration := models.Registration{
+			UserID:     int(uid),
+			ActivityID: activityID,
+			Status:     "pending",
+			// RegistrationTime: time.Now(), // 在数据库层面自动生成
+		}
 
-		_, err = db.Exec(query, int(uid), activityID)
+		// 2. 准备插入语句
+		query := "INSERT INTO registrations (user_id, activity_id, status) VALUES (?, ?, ?)"
+
+		// 3. 执行插入操作
+		_, err = db.Exec(query, registration.UserID, registration.ActivityID, registration.Status)
 		if err != nil {
 			// 处理可能的错误，比如重复报名
 			if strings.Contains(err.Error(), "Duplicate entry") {
 				c.JSON(http.StatusConflict, gin.H{"error": "你已经报名过该活动"})
 				return
 			}
+			log.Printf("数据库插入报名记录失败: %v", err) // 记录详细错误
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "报名失败，服务器错误"})
 			return
 		}

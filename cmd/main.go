@@ -56,7 +56,7 @@ func main() {
 		// stats
 		api.GET("/stats/hot-activities", handlers.GetHotActivities)
 		api.GET("/stats/organizer-activity-counts", handlers.GetOrganizerStats)
-		// Admin routes
+		// admin
 		api.GET("/activities/:id/registrations", handlers.GetRegistrationsByActivityIDHandler(db))
 		admin := api.Group("/admin")
 		{

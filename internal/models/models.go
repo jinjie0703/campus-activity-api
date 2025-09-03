@@ -2,7 +2,7 @@ package models
 
 import "time"
 
-// 用户模型
+// 用户视图模型
 type User struct {
 	ID           int    `json:"id"`
 	Username     string `json:"username"`
@@ -12,7 +12,7 @@ type User struct {
 	Role         string `json:"role"`
 }
 
-// 活动模型
+// 活动视图模型
 type Activity struct {
 	ID          int       `json:"id"`
 	Title       string    `json:"title"`
@@ -26,7 +26,7 @@ type Activity struct {
 	CreatedByID int       `json:"createdById"`
 }
 
-// 用户注册信息模型
+// 获取用户报名的所有活动的视图模型
 type UserRegistration struct {
 	RegistrationID int       `json:"registrationId"`
 	ActivityID     int       `json:"activityId"`
@@ -44,7 +44,7 @@ type Registration struct {
 	Status           string    `json:"status"` // "pending", "approved"
 }
 
-// 报名信息
+// 获取系统中所有用户的报名信息视图模型
 type RegistrationDetails struct {
 	RegistrationID   int       `json:"registrationId"`
 	ActivityID       int       `json:"activityId"`
@@ -56,7 +56,7 @@ type RegistrationDetails struct {
 	Status           string    `json:"status"`
 }
 
-// 显示特定活动报名者信息的视图模型
+// 根据活动 ID 获取该活动的所有报名者信息的视图模型
 type RegistrationDetailsForActivity struct {
 	RegistrationID   int       `json:"registrationId"` // 新增：报名记录ID
 	UserID           int       `json:"userId"`
