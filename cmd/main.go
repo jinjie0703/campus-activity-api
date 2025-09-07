@@ -36,7 +36,8 @@ func main() {
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Authorization"},
 		AllowCredentials: true,
-		MaxAge:           12 * time.Hour,
+		// 对于相同的请求，无需再发送 OPTIONS 预检请求
+		MaxAge: 12 * time.Hour,
 	}))
 
 	api := router.Group("/api")
