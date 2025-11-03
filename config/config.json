@@ -4,7 +4,7 @@
       "dsn": "root:2594817591@tcp(127.0.0.1:3306)/campus_activity?charset=utf8mb4&parseTime=True&loc=Local"
     },
     "jwt": {
-      "secret": "your_development_secret_key"
+      "secret": "development_secret_key"
     }
   },
   "azure": {
@@ -12,7 +12,7 @@
       "dsn": "cg2594817591:20050726.cg@tcp(jinjie0808.mysql.database.azure.com:3306)/campus_activity?charset=utf8mb4&parseTime=True&loc=Local&tls=true"
     },
     "jwt": {
-      "secret": "your_azure_secret_key"
+      "secret": "azure_secret_key"
     }
   }
 }
