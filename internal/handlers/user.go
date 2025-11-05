@@ -17,7 +17,13 @@ func GetMyActivities(c *gin.Context) {
 	// 从 url 参数中获取用户id
 	userID := c.Param("id")
 	// sql查询
-	query := `SELECT r.id, a.id, a.title, a.location, a.start_time FROM registrations r JOIN activities a ON r.activity_id = a.id WHERE r.user_id = ? ORDER BY a.start_time DESC`
+	query := `
+	SELECT r.id, a.id, a.title, a.location, a.start_time 
+	FROM registrations r 
+	JOIN activities a 
+	ON r.activity_id = a.id 
+	WHERE r.user_id = ? 
+	ORDER BY a.start_time DESC`
 	rows, err := DB.Query(query, userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "查询我的活动失败"})
@@ -48,21 +54,20 @@ func RegisterForActivityHandler(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
-		// 从认证中间件获取用户ID (这是标准做法)
+		// 从认证中间件获取用户ID (标准做法)
 		userID, exists := c.Get("userID")
 		if !exists {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "用户未登录"})
 			return
 		}
 
-		// 类型断言
+		// 类型断言，json对象在Go中被解码到interface{}时，数字类型会变成float64
 		uid, ok := userID.(float64)
 		if !ok {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "无法解析用户ID"})
 			return
 		}
 
-		// --- 重构：使用 Registration 模型 ---
 		// 1. 创建一个 Registration 对象
 		registration := models.Registration{
 			UserID:     int(uid),
@@ -93,15 +98,22 @@ func RegisterForActivityHandler(db *sql.DB) gin.HandlerFunc {
 
 // 用户取消活动报名处理
 func CancelRegistration(c *gin.Context) {
+	// 从 url 参数中获取报名ID
 	registrationID := c.Param("id")
-	// sql删除
+
+	// 准备删除语句
 	stmt, err := DB.Prepare("DELETE FROM registrations WHERE id = ?")
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "取消报名失败"})
 		return
 	}
+
 	defer stmt.Close()
+
+	// 执行删除操作
 	_, err = stmt.Exec(registrationID)
+
+	// 检查删除是否成功
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "执行取消报名失败"})
 		return

@@ -10,7 +10,7 @@ import (
 
 // 查询报名人数最多的前 5 个热门活动
 func GetHotActivities(c *gin.Context) {
-	// 存储热门活动的统计信息
+	// 定义热门活动的结果结构体
 	type HotActivityResult struct {
 		Title             string `json:"title"`
 		Organizer         string `json:"organizer"`
@@ -57,7 +57,7 @@ func GetHotActivities(c *gin.Context) {
 
 // 统计每个组织者举办活动的数量
 func GetOrganizerStats(c *gin.Context) {
-	// 保存组织者的统计数据
+	// 保存组织者的统计数据结构体
 	type OrganizerStat struct {
 		Organizer     string `json:"organizer"`
 		ActivityCount int    `json:"activityCount"`

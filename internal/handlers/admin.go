@@ -55,7 +55,7 @@ func GetAllRegistrations(db *sql.DB) ([]models.RegistrationDetails, error) {
 	return registrations, nil
 }
 
-// 获取系统中所有用户的报名信息
+// 获取系统中所有用户的报名信息，调用 GetAllRegistrations 函数
 func GetRegistrationsHandler(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		registrations, err := GetAllRegistrations(db)
@@ -67,15 +67,14 @@ func GetRegistrationsHandler(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
-// 更新某个报名记录的 status 字段
+// 更新某个报名记录的 status 字段，设置报名审核通过或待审核状态
 func UpdateRegistrationStatus(db *sql.DB, registrationID int, status string) error {
 	query := "UPDATE registrations SET status = ? WHERE id = ?"
 	_, err := db.Exec(query, status, registrationID)
 	return err
 }
 
-// 管理员更新报名状态的 Gin 处理函数
-// 管理员修改某个报名的状态
+// 管理员修改某个报名的状态，调用 UpdateRegistrationStatus 函数
 func AdminUpdateRegistrationStatusHandler(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 从 URL 获取报名ID
@@ -84,7 +83,6 @@ func AdminUpdateRegistrationStatusHandler(db *sql.DB) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "无效的报名ID"})
 			return
 		}
-
 		// 从请求体获取新的状态
 		var req struct {
 			Status string `json:"status" binding:"required"`
@@ -93,19 +91,16 @@ func AdminUpdateRegistrationStatusHandler(db *sql.DB) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "请求体无效, 需要 'status' 字段"})
 			return
 		}
-
 		// 验证 status 值是否合法
 		if req.Status != "approved" && req.Status != "pending" {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "状态值必须是 'approved' 或 'pending'"})
 			return
 		}
-
 		// 调用数据库函数更新状态
 		if err := UpdateRegistrationStatus(db, registrationID, req.Status); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "更新报名状态失败"})
 			return
 		}
-
 		c.JSON(http.StatusOK, gin.H{"message": "报名状态更新成功"})
 	}
 }
@@ -153,13 +148,12 @@ func GetRegistrationsByActivityID(db *sql.DB, activityID int) ([]models.Registra
 }
 
 // 根据活动 ID 获取该活动的所有报名者信息，并返回给前端
-// 根据活动 ID 获取该活动的所有报名者信息
 func GetRegistrationsByActivityIDHandler(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 从 URL 中获取活动 ID
 		activityID, err := strconv.Atoi(c.Param("id"))
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid activity ID"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "活动ID无效"})
 			return
 		}
 
@@ -167,7 +161,7 @@ func GetRegistrationsByActivityIDHandler(db *sql.DB) gin.HandlerFunc {
 		registrants, err := GetRegistrationsByActivityID(db, activityID)
 		if err != nil {
 			// 可以在这里增加日志记录 err 的具体信息
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve registrants"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "获取报名者信息失败: " + err.Error()})
 			return
 		}
 
@@ -191,9 +185,6 @@ func AdminDeleteRegistrationHandler(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
-		// 【核心修改】移除了所有关于 activities 表和 registered_count 的操作
-		// 我们不再需要事务，因为现在只执行一个单一的数据库操作。
-
 		// 2. 直接根据 registrationID 执行删除操作
 		query := "DELETE FROM registrations WHERE id = ?"
 		result, err := db.Exec(query, registrationID)
@@ -203,7 +194,7 @@ func AdminDeleteRegistrationHandler(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
-		// 3. （可选但推荐）检查是否真的删除了记录
+		// 3. 检查是否真的删除了记录
 		rowsAffected, err := result.RowsAffected()
 		if err != nil {
 			log.Printf("获取影响行数失败: %v", err)

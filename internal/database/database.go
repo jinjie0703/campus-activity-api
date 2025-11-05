@@ -18,6 +18,7 @@ func InitDB() (*sql.DB, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	// 设置最大连接时长 3 分钟，10 个同时并发和 10 个空闲连接数
 	db.SetConnMaxLifetime(time.Minute * 3)
 	db.SetMaxOpenConns(10)

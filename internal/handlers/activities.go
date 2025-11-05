@@ -13,29 +13,41 @@ import (
 
 // 获取活动列表，支持条件筛选
 func GetActivities(c *gin.Context) {
+	// 从查询参数获取筛选条件
 	category := c.Query("category")
+	// 从查询参数获取搜索关键词
 	search := c.Query("search")
+	// 构建基础查询语句
 	query := "SELECT id, title, description, category, organizer, location, start_time, end_time, capacity, created_by_id FROM activities"
+	// 动态添加筛选条件
 	conditions := []string{}
+	// 动态添加查询参数
 	args := []interface{}{}
+	// 根据是否提供筛选条件，构建 WHERE 子句
 	if category != "" {
 		conditions = append(conditions, "category = ?")
 		args = append(args, category)
 	}
+	// 根据搜索关键词模糊匹配标题
 	if search != "" {
 		conditions = append(conditions, "title LIKE ?")
 		args = append(args, "%"+search+"%")
 	}
+	// 拼接最终查询语句
 	if len(conditions) > 0 {
 		query += " WHERE " + strings.Join(conditions, " AND ")
 	}
+	// 默认按开始时间降序排列
 	query += " ORDER BY start_time DESC"
+	// 执行查询
 	rows, err := DB.Query(query, args...)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "查询活动失败: " + err.Error()})
 		return
 	}
 	defer rows.Close()
+
+	// 遍历结果集，构建活动切片，返回给前端
 	activities := []models.Activity{}
 	for rows.Next() {
 		var a models.Activity
@@ -66,12 +78,11 @@ func GetActivityByID(c *gin.Context) {
 
 // 创建一个新活动
 func CreateActivity(c *gin.Context) {
+	// 定义一个 Activity 变量来接收前端传来的数据，使用 models 包中的 Activity 结构体
 	var activity models.Activity
 
-	// 1. 绑定 JSON 数据，如果失败则记录详细错误
+	// 1. 绑定 JSON 数据
 	if err := c.ShouldBindJSON(&activity); err != nil {
-		// 【关键】在服务器控制台打印出详细的错误，方便调试
-		log.Printf("无法绑定活动数据, 错误: %v", err)
 		// 返回给前端一个清晰的错误信息
 		c.JSON(http.StatusBadRequest, gin.H{"error": "请求的数据格式无效或不完整"})
 		return
@@ -88,15 +99,14 @@ func CreateActivity(c *gin.Context) {
 	}
 	// 可以添加更多验证...
 
-	// 3. 从 Gin 的上下文中获取当前登录用户ID (不再硬编码)
-	//    这需要你的认证中间件在用户登录后，将用户ID存入 context
-	//    例如: c.Set("userID", user.ID)
+	// 从auth中间件获取用户ID，作为活动的创建者
 	userID, exists := c.Get("userID")
 	if !exists {
 		// 如果中间件没有设置 userID，说明用户未认证
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "用户未认证，无法发布活动"})
 		return
 	}
+
 	// 类型断言，将 any/interface{} 转换为 int
 	if uid, ok := userID.(float64); ok {
 		activity.CreatedByID = int(uid)
@@ -106,18 +116,17 @@ func CreateActivity(c *gin.Context) {
 	}
 
 	// 4. 执行数据库插入操作
-	// 使用 ExecContext 来支持请求的上下文，例如超时控制
 	query := `
 		INSERT INTO activities(title, description, category, organizer, location, start_time, end_time, capacity, created_by_id) 
 		VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
+	// 5. 使用 ExecContext 执行插入，并获取结果
 	result, err := DB.ExecContext(c.Request.Context(), query,
 		activity.Title, activity.Description, activity.Category, activity.Organizer,
 		activity.Location, activity.StartTime, activity.EndTime, activity.Capacity, activity.CreatedByID,
 	)
 
 	if err != nil {
-		log.Printf("数据库插入活动失败: %v", err) // 记录详细的数据库错误
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "服务器内部错误，创建活动失败"})
 		return
 	}
@@ -125,26 +134,30 @@ func CreateActivity(c *gin.Context) {
 	// 5. 获取新插入行的ID，并返回完整的活动对象
 	id, err := result.LastInsertId()
 	if err != nil {
-		log.Printf("获取 LastInsertId 失败: %v", err)
-		// 即使获取ID失败，活动也已创建成功，可以返回一个通用成功消息
 		c.JSON(http.StatusCreated, gin.H{"message": "活动创建成功"})
 		return
 	}
 
 	activity.ID = int(id) // 将新ID赋值给对象
 
-	c.JSON(http.StatusCreated, activity) // 返回包含新ID的完整活动对象
+	// 返回包含新活动的详细信息，减小开销
+	c.JSON(http.StatusCreated, activity)
 }
 
 // 删除一个活动
 func DeleteActivity(c *gin.Context) {
+	// 从URL参数中获取活动ID
 	id := c.Param("id")
+
+	// 准备删除语句
 	stmt, err := DB.Prepare("DELETE FROM activities WHERE id = ?")
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "删除活动失败"})
 		return
 	}
 	defer stmt.Close()
+
+	// 执行删除
 	_, err = stmt.Exec(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "执行删除活动失败"})

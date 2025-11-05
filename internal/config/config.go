@@ -28,20 +28,24 @@ var Cfg *Config
 func LoadConfig() error {
 	// 扩展性保留，实际并没有 APP_ENV 配置文件
 	env := os.Getenv("APP_ENV")
+	// 选择加载什么配置文件
 	if env == "" {
 		env = "azure"
 	}
 
+	// 加载config.json文件
 	file, err := os.ReadFile("config/config.json")
 	if err != nil {
 		return err
 	}
 
+	// 解析 JSON 文件，映射到 allConfigs 结构体
 	var allConfigs map[string]Config
 	if err := json.Unmarshal(file, &allConfigs); err != nil {
 		return err
 	}
 
+	// 获取指定环境的配置
 	envConfig, ok := allConfigs[env]
 	if !ok {
 		return &ConfigError{Env: env}

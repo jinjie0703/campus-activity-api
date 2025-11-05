@@ -46,7 +46,8 @@ func Register(c *gin.Context) {
 	}
 
 	// 将新用户插入数据库
-	stmt, err := DB.Prepare("INSERT INTO users(username, password_hash, full_name, college, role) VALUES(?, ?, ?, ?, 'student')")
+	stmt, err := DB.Prepare(
+		"INSERT INTO users(username, password_hash, full_name, college, role) VALUES(?, ?, ?, ?, 'student')")
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "数据库准备失败"})
 		return
@@ -70,10 +71,13 @@ func Register(c *gin.Context) {
 
 // 登录处理
 func Login(c *gin.Context) {
+	// 定义匿名结构体来接受前端传回来的json
 	var req struct {
 		Username string `json:"username"`
 		Password string `json:"password"`
 	}
+
+	// json结构不对或者类型不匹配返回 400 Bad Request
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的请求"})
 		return
@@ -81,8 +85,11 @@ func Login(c *gin.Context) {
 
 	// 从数据库中查询用户，这次需要包含 password_hash
 	var user models.User
+
 	// 查询语句中增加了 password_hash
-	err := DB.QueryRow("SELECT id, username, password_hash, full_name, college, role FROM users WHERE username = ?", req.Username).Scan(&user.ID, &user.Username, &user.PasswordHash, &user.FullName, &user.College, &user.Role)
+	err := DB.QueryRow(
+		"SELECT id, username, password_hash, full_name, college, role FROM users WHERE username = ?", 
+		req.Username).Scan(&user.ID, &user.Username, &user.PasswordHash, &user.FullName, &user.College, &user.Role)
 	if err != nil {
 		// 无论是用户不存在还是其他数据库错误，都返回统一的错误信息
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "用户名或密码错误"})
@@ -104,9 +111,11 @@ func Login(c *gin.Context) {
 		"id":       user.ID,
 		"username": user.Username,
 		"role":     user.Role,
+		// 过期时间设置为24小时
 		"exp":      time.Now().Add(time.Hour * 24).Unix(),
 	})
 
+	// 使用配置中的 secret 签名并获取完整的编码后的 token 字符串
 	tokenString, err := token.SignedString([]byte(config.Cfg.JWT.Secret))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "无法生成token"})

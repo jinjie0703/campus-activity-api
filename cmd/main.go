@@ -24,6 +24,7 @@ func main() {
 		log.Fatalf("无法初始化数据库: %v", err)
 	}
 	defer db.Close()
+	
 	// 3. 将数据库连接实例注入到handlers包
 	handlers.DB = db
 	log.Println("数据库连接成功!")
